@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    // We'll now  store dates instead of just boolean selection states
+    // We'll now store dates instead of just boolean selection states
     // The dictionary will map block indices to their selection dates
     @State private var selectedDates: [Int: Date] = [:]
     
@@ -15,7 +15,7 @@ struct ContentView: View {
     // Date formatter to show dates in a readable format
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MM/dd\nHH:mm"
+        formatter.dateFormat = "MM/dd"
         return formatter
     }()
     
