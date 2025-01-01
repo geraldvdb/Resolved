@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    // We'll now store dates instead of just boolean selection states
+    // We'll now  store dates instead of just boolean selection states
     // The dictionary will map block indices to their selection dates
     @State private var selectedDates: [Int: Date] = [:]
     
