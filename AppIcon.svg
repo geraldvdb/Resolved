@@ -1,0 +1,29 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e2a45"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="mountainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ade80"/>
+      <stop offset="100%" style="stop-color:#22c55e"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background rectangle -->
+  <rect width="1024" height="1024" fill="url(#bgGradient)"/>
+  
+  <!-- Mountain peaks -->
+  <!-- Back mountain (smaller, lighter) -->
+  <path d="M280 700 L480 380 L680 700 Z" fill="#4ade80" opacity="0.4"/>
+  
+  <!-- Front mountain (larger, main) -->
+  <path d="M120 700 L400 280 L520 450 L620 320 L900 700 Z" fill="url(#mountainGradient)"/>
+  
+  <!-- Snow cap on main peak -->
+  <path d="M400 280 L340 380 L400 350 L460 380 Z" fill="white" opacity="0.9"/>
+  
+  <!-- Snow cap on second peak -->
+  <path d="M620 320 L570 400 L620 375 L670 400 Z" fill="white" opacity="0.9"/>
+</svg>
