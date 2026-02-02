@@ -1,5 +1,14 @@
+//
+//  ResolutionCard.swift
+//  Resolved
+//
+//  Card component displaying a resolution summary on the home screen.
+//  Shows progress ring, name, stats, and quick-log button.
+//
+
 import SwiftUI
 
+/// Card view summarizing a resolution's progress
 struct ResolutionCard: View {
     @Environment(\.colorScheme) private var colorScheme
     let resolution: Resolution
@@ -124,7 +133,7 @@ struct ResolutionCard: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(AppColors.successGradient)
+                        .background(AppColors.successGradient(colorScheme))
                         .cornerRadius(12)
                     }
                     .buttonStyle(PlainButtonStyle())

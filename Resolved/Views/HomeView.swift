@@ -1,6 +1,15 @@
+//
+//  HomeView.swift
+//  Resolved
+//
+//  Main view displaying all resolutions with progress summaries.
+//  Provides access to add new resolutions and log progress.
+//
+
 import SwiftUI
 import SwiftData
 
+/// The main home screen showing all user resolutions
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
@@ -8,6 +17,10 @@ struct HomeView: View {
     
     @State private var showingAddResolution = false
     @State private var resolutionToLog: Resolution?
+    
+    // Celebration state
+    @State private var showSuccessToast = false
+    @State private var streakToShow: Int? = nil
     @State private var rewardToShow: Reward?
     @State private var pendingRewards: [Reward] = []
     
@@ -93,9 +106,9 @@ struct HomeView: View {
                                     .font(.system(size: 26, weight: .bold))
                                     .foregroundColor(AppColors.background(colorScheme))
                                     .frame(width: 64, height: 64)
-                                    .background(AppColors.successGradient)
+                                    .background(AppColors.successGradient(colorScheme))
                                     .clipShape(Circle())
-                                    .shadow(color: AppColors.successDark.opacity(0.5), radius: 12, x: 0, y: 6)
+                                    .shadow(color: AppColors.successDark(colorScheme).opacity(0.5), radius: 12, x: 0, y: 6)
                                 
                                 Text("New Goal")
                                     .font(.custom("Avenir Next", size: 11))
@@ -108,6 +121,27 @@ struct HomeView: View {
                     }
                 }
                 
+                // MARK: - Celebration Overlays
+                
+                // Success toast (shown when no streak)
+                if showSuccessToast {
+                    SuccessToastView(message: "Well done!") {
+                        showSuccessToast = false
+                        onToastComplete()
+                    }
+                    .zIndex(99)
+                }
+                
+                // Streak celebration (shown when streak extended)
+                if let streak = streakToShow {
+                    StreakCelebrationView(streakCount: streak) {
+                        streakToShow = nil
+                        onStreakDismiss()
+                    }
+                    .transition(.opacity)
+                    .zIndex(100)
+                }
+                
                 // Reward popup overlay
                 if let reward = rewardToShow {
                     RewardPopupView(reward: reward) {
@@ -115,7 +149,7 @@ struct HomeView: View {
                         showNextPendingReward()
                     }
                     .transition(.opacity)
-                    .zIndex(100)
+                    .zIndex(101)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -124,15 +158,40 @@ struct HomeView: View {
                 AddResolutionSheet()
             }
             .sheet(item: $resolutionToLog) { resolution in
-                LogProgressSheet(resolution: resolution) { unlockedRewards in
-                    pendingRewards.append(contentsOf: unlockedRewards)
-                    // Show first reward after a short delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showNextPendingReward()
+                LogProgressSheet(resolution: resolution) { result in
+                    // Store results
+                    pendingRewards = result.unlockedRewards
+                    streakToShow = result.newStreakCount
+                    
+                    // Start celebration sequence after sheet dismisses
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        startCelebrationSequence()
                     }
                 }
             }
         }
+    }
+    
+    // MARK: - Celebration Sequence
+    
+    private func startCelebrationSequence() {
+        if let _ = streakToShow {
+            // Streak celebration will show (streakToShow is already set)
+            // No need to do anything - it's already triggered by the state
+        } else {
+            // Show simple "Well done!" toast
+            showSuccessToast = true
+        }
+    }
+    
+    private func onToastComplete() {
+        // Toast done, check for rewards
+        showNextPendingReward()
+    }
+    
+    private func onStreakDismiss() {
+        // Streak done, check for rewards
+        showNextPendingReward()
     }
     
     private func showNextPendingReward() {

@@ -1,6 +1,16 @@
+//
+//  AddResolutionSheet.swift
+//  Resolved
+//
+//  Multi-step sheet for creating a new resolution with optional rewards.
+//  Step 1: Enter resolution details (name, description, target count)
+//  Step 2: Configure optional rewards at various milestones
+//
+
 import SwiftUI
 import SwiftData
 
+/// Sheet view for creating a new resolution
 struct AddResolutionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -102,7 +112,7 @@ struct AddResolutionSheet: View {
                                 .fontWeight(.medium)
                                 .foregroundColor(AppColors.secondaryText(colorScheme))
                             
-                            TextField("", text: $name, prompt: Text("e.g., Go to the gym").foregroundColor(AppColors.secondaryText(colorScheme).opacity(0.6)))
+                            TextField("", text: $name, prompt: Text("e.g. Go to the Gym").foregroundColor(AppColors.secondaryText(colorScheme).opacity(0.6)))
                                 .font(.custom("Avenir Next", size: 18))
                                 .foregroundColor(AppColors.primaryText(colorScheme))
                                 .padding()
@@ -120,12 +130,12 @@ struct AddResolutionSheet: View {
                         
                         // Description field
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Description")
+                            Text("Description (optional)")
                                 .font(.custom("Avenir Next", size: 14))
                                 .fontWeight(.medium)
                                 .foregroundColor(AppColors.secondaryText(colorScheme))
                             
-                        TextField("", text: $descriptionText, prompt: Text("What's this resolution about?").foregroundColor(AppColors.secondaryText(colorScheme).opacity(0.6)))
+                        TextField("", text: $descriptionText, prompt: Text("Add any details about this resolution").foregroundColor(AppColors.secondaryText(colorScheme).opacity(0.6)))
                                 .font(.custom("Avenir Next", size: 16))
                                 .foregroundColor(AppColors.primaryText(colorScheme))
                                 .padding()
@@ -212,7 +222,7 @@ struct AddResolutionSheet: View {
                         .font(.system(size: 50))
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [AppColors.gold, AppColors.goldLight],
+                                colors: [AppColors.gold(colorScheme), AppColors.goldLight(colorScheme)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -240,14 +250,14 @@ struct AddResolutionSheet: View {
                         }
                         .font(.custom("Avenir Next", size: 16))
                         .fontWeight(.medium)
-                        .foregroundColor(AppColors.success)
+                        .foregroundColor(AppColors.success(colorScheme))
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(AppColors.inputBackground(colorScheme))
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(AppColors.success.opacity(0.5), lineWidth: 1)
+                                .stroke(AppColors.success(colorScheme).opacity(AppColors.borderOpacity(colorScheme)), lineWidth: 1)
                         )
                     }
                 }
@@ -386,7 +396,7 @@ struct RewardRow: View {
     var body: some View {
         HStack {
             Image(systemName: reward.icon)
-                .foregroundColor(AppColors.gold)
+                .foregroundColor(AppColors.gold(colorScheme))
                 .frame(width: 30)
             
             VStack(alignment: .leading, spacing: 4) {
@@ -508,7 +518,7 @@ struct AddRewardSheet: View {
                                     Text("#\(milestoneValue)")
                                         .font(.custom("Avenir Next", size: 18))
                                         .fontWeight(.bold)
-                                        .foregroundColor(AppColors.gold)
+                                        .foregroundColor(AppColors.gold(colorScheme))
                                         .frame(width: 60)
                                 }
                                 .padding()
@@ -518,7 +528,7 @@ struct AddRewardSheet: View {
                         } else {
                             HStack {
                                 Image(systemName: "trophy.fill")
-                                    .foregroundColor(AppColors.gold)
+                                    .foregroundColor(AppColors.gold(colorScheme))
                                 Text("Unlocks when all \(targetCount) are completed!")
                                     .font(.custom("Avenir Next", size: 14))
                                     .foregroundColor(AppColors.secondaryText(colorScheme))

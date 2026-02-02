@@ -42,7 +42,7 @@ struct AppColors {
     }
     
     static func secondaryText(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? .gray : Color(hex: "6b7280")
+        scheme == .dark ? .gray : Color(hex: "4b5563")  // Darker gray for better contrast
     }
     
     // MARK: - Borders & Dividers
@@ -55,7 +55,7 @@ struct AppColors {
         scheme == .dark ? Color.white.opacity(0.1) : Color(hex: "e5e5ea")
     }
     
-    // MARK: - Accents (same in both modes)
+    // MARK: - Accents
     
     static let accent = Color(hex: "e94560")
     static let accentLight = Color(hex: "ff6b6b")
@@ -65,16 +65,41 @@ struct AppColors {
         endPoint: .trailing
     )
     
-    static let success = Color(hex: "4ade80")
-    static let successDark = Color(hex: "22c55e")
-    static let successGradient = LinearGradient(
-        colors: [Color(hex: "4ade80"), Color(hex: "22c55e")],
-        startPoint: .leading,
-        endPoint: .trailing
-    )
+    // Success green - darker in light mode for better contrast
+    static func success(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(hex: "4ade80") : Color(hex: "16a34a")
+    }
     
-    static let gold = Color(hex: "ffd700")
-    static let goldLight = Color(hex: "ffaa00")
+    static func successDark(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(hex: "22c55e") : Color(hex: "15803d")
+    }
+    
+    static func successGradient(_ scheme: ColorScheme) -> LinearGradient {
+        scheme == .dark
+            ? LinearGradient(colors: [Color(hex: "4ade80"), Color(hex: "22c55e")], startPoint: .leading, endPoint: .trailing)
+            : LinearGradient(colors: [Color(hex: "22c55e"), Color(hex: "16a34a")], startPoint: .leading, endPoint: .trailing)
+    }
+    
+    // Gold - darker amber in light mode for better contrast
+    static func gold(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(hex: "ffd700") : Color(hex: "d97706")
+    }
+    
+    static func goldLight(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(hex: "ffaa00") : Color(hex: "b45309")
+    }
+    
+    // MARK: - Opacity helpers for light mode contrast
+    
+    /// Returns appropriate opacity for borders/strokes - higher in light mode
+    static func borderOpacity(_ scheme: ColorScheme, base: Double = 0.5) -> Double {
+        scheme == .dark ? base : min(base + 0.3, 1.0)
+    }
+    
+    /// Returns appropriate opacity for subtle backgrounds - higher in light mode  
+    static func subtleBackgroundOpacity(_ scheme: ColorScheme, base: Double = 0.15) -> Double {
+        scheme == .dark ? base : min(base + 0.1, 0.4)
+    }
     
     // MARK: - Shadows
     

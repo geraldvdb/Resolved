@@ -1,6 +1,15 @@
+//
+//  ResolutionDetailView.swift
+//  Resolved
+//
+//  Detailed view for a single resolution showing progress visualization,
+//  reward tracking, and recent log entries.
+//
+
 import SwiftUI
 import SwiftData
 
+/// Detailed view for a single resolution
 struct ResolutionDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
@@ -8,6 +17,10 @@ struct ResolutionDetailView: View {
     
     @State private var showingLogProgress = false
     @State private var showingEditSheet = false
+    
+    // Celebration state
+    @State private var showSuccessToast = false
+    @State private var streakToShow: Int? = nil
     @State private var rewardToShow: Reward?
     @State private var pendingRewards: [Reward] = []
     
@@ -72,11 +85,32 @@ struct ResolutionDetailView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 14)
-                    .background(AppColors.successGradient)
+                    .background(AppColors.successGradient(colorScheme))
                     .cornerRadius(25)
-                    .shadow(color: AppColors.success.opacity(0.5), radius: 10, x: 0, y: 5)
+                    .shadow(color: AppColors.success(colorScheme).opacity(0.5), radius: 10, x: 0, y: 5)
                 }
                 .padding(.bottom, 24)
+            }
+            
+            // MARK: - Celebration Overlays
+            
+            // Success toast (shown when no streak)
+            if showSuccessToast {
+                SuccessToastView(message: "Well done!") {
+                    showSuccessToast = false
+                    onToastComplete()
+                }
+                .zIndex(99)
+            }
+            
+            // Streak celebration (shown when streak extended)
+            if let streak = streakToShow {
+                StreakCelebrationView(streakCount: streak) {
+                    streakToShow = nil
+                    onStreakDismiss()
+                }
+                .transition(.opacity)
+                .zIndex(100)
             }
             
             // Reward popup overlay
@@ -86,7 +120,7 @@ struct ResolutionDetailView: View {
                     showNextPendingReward()
                 }
                 .transition(.opacity)
-                .zIndex(100)
+                .zIndex(101)
             }
         }
         .navigationTitle(resolution.name)
@@ -99,22 +133,47 @@ struct ResolutionDetailView: View {
                 Button(action: { showingEditSheet = true }) {
                     Image(systemName: "pencil.circle.fill")
                         .font(.system(size: 22))
-                        .foregroundColor(AppColors.success)
+                        .foregroundColor(AppColors.success(colorScheme))
                 }
             }
         }
         .sheet(isPresented: $showingLogProgress) {
-            LogProgressSheet(resolution: resolution) { unlockedRewards in
-                pendingRewards.append(contentsOf: unlockedRewards)
-                // Show first reward after a short delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    showNextPendingReward()
+            LogProgressSheet(resolution: resolution) { result in
+                // Store results
+                pendingRewards = result.unlockedRewards
+                streakToShow = result.newStreakCount
+                
+                // Start celebration sequence after sheet dismisses
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    startCelebrationSequence()
                 }
             }
         }
         .sheet(isPresented: $showingEditSheet) {
             EditResolutionSheet(resolution: resolution)
         }
+    }
+    
+    // MARK: - Celebration Sequence
+    
+    private func startCelebrationSequence() {
+        if let _ = streakToShow {
+            // Streak celebration will show (streakToShow is already set)
+            // No need to do anything - it's already triggered by the state
+        } else {
+            // Show simple "Well done!" toast
+            showSuccessToast = true
+        }
+    }
+    
+    private func onToastComplete() {
+        // Toast done, check for rewards
+        showNextPendingReward()
+    }
+    
+    private func onStreakDismiss() {
+        // Streak done, check for rewards
+        showNextPendingReward()
     }
     
     private func showNextPendingReward() {
@@ -138,11 +197,18 @@ struct ResolutionDetailView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "trophy.fill")
                             .font(.system(size: 12))
-                        Text("\(resolution.unlockedRewards.count)/\((resolution.rewards ?? []).count)")
-                            .font(.custom("Avenir Next", size: 14))
-                            .fontWeight(.bold)
+                        // Show total unlock count (includes multiple unlocks for segment rewards)
+                        if resolution.totalUnlockCount > resolution.unlockedRewards.count {
+                            Text("\(resolution.totalUnlockCount) unlocked")
+                                .font(.custom("Avenir Next", size: 14))
+                                .fontWeight(.bold)
+                        } else {
+                            Text("\(resolution.unlockedRewards.count)/\((resolution.rewards ?? []).count)")
+                                .font(.custom("Avenir Next", size: 14))
+                                .fontWeight(.bold)
+                        }
                     }
-                    .foregroundColor(AppColors.gold)
+                    .foregroundColor(AppColors.gold(colorScheme))
                 }
             }
             
@@ -176,12 +242,12 @@ struct ResolutionDetailView: View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(AppColors.gold.opacity(0.2))
+                    .fill(AppColors.gold(colorScheme).opacity(AppColors.subtleBackgroundOpacity(colorScheme, base: 0.2)))
                     .frame(width: 50, height: 50)
                 
                 Image(systemName: reward.triggerIcon)
                     .font(.system(size: 24))
-                    .foregroundColor(AppColors.gold)
+                    .foregroundColor(AppColors.gold(colorScheme))
             }
             
             VStack(alignment: .leading, spacing: 4) {
@@ -208,7 +274,7 @@ struct ResolutionDetailView: View {
         .padding(16)
         .background(
             LinearGradient(
-                colors: [AppColors.gold.opacity(0.1), AppColors.accent.opacity(0.1)],
+                colors: [AppColors.gold(colorScheme).opacity(AppColors.subtleBackgroundOpacity(colorScheme, base: 0.1)), AppColors.accent.opacity(AppColors.subtleBackgroundOpacity(colorScheme, base: 0.1))],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -216,7 +282,7 @@ struct ResolutionDetailView: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(AppColors.gold.opacity(0.3), lineWidth: 1)
+                .stroke(AppColors.gold(colorScheme).opacity(AppColors.borderOpacity(colorScheme, base: 0.3)), lineWidth: 1)
         )
     }
     
@@ -267,16 +333,16 @@ struct ResolutionDetailView: View {
         return ZStack {
             if reward.isUnlocked {
                 Circle()
-                    .fill(AppColors.gold.opacity(0.3))
+                    .fill(AppColors.gold(colorScheme).opacity(AppColors.borderOpacity(colorScheme, base: 0.3)))
                     .frame(width: 28, height: 28)
             }
             
             Circle()
-                .fill(reward.isUnlocked ? AppColors.gold : AppColors.progressTrack(colorScheme))
+                .fill(reward.isUnlocked ? AppColors.gold(colorScheme) : AppColors.progressTrack(colorScheme))
                 .frame(width: 20, height: 20)
                 .overlay(
                     Circle()
-                        .stroke(reward.isUnlocked ? AppColors.gold : AppColors.secondaryText(colorScheme).opacity(0.5), lineWidth: 2)
+                        .stroke(reward.isUnlocked ? AppColors.gold(colorScheme) : AppColors.secondaryText(colorScheme).opacity(0.5), lineWidth: 2)
                 )
             
             Image(systemName: reward.isUnlocked ? "checkmark" : reward.triggerIcon)
@@ -287,15 +353,28 @@ struct ResolutionDetailView: View {
     }
     
     private func unlockedRewardRow(_ reward: Reward) -> some View {
-        HStack(spacing: 12) {
+        let currentCount = (resolution.logEntries ?? []).count
+        let displayCount = reward.triggerType == "segment" 
+            ? reward.expectedUnlockCount(currentCount: currentCount)
+            : reward.unlockCount
+        
+        return HStack(spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 20))
-                .foregroundColor(AppColors.success)
+                .foregroundColor(AppColors.success(colorScheme))
             
             Text(reward.descriptionText)
                 .font(.custom("Avenir Next", size: 14))
                 .foregroundColor(AppColors.primaryText(colorScheme))
                 .lineLimit(1)
+            
+            // Show unlock count for segment rewards
+            if reward.triggerType == "segment" && displayCount > 1 {
+                Text("×\(displayCount)")
+                    .font(.custom("Avenir Next", size: 14))
+                    .fontWeight(.bold)
+                    .foregroundColor(AppColors.gold(colorScheme))
+            }
             
             Spacer()
             
@@ -412,7 +491,7 @@ struct ResolutionDetailView: View {
             
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 24))
-                .foregroundColor(AppColors.success)
+                .foregroundColor(AppColors.success(colorScheme))
         }
         .padding(16)
         .background(AppColors.background(colorScheme))

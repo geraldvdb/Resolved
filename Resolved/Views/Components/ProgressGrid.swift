@@ -1,5 +1,14 @@
+//
+//  ProgressGrid.swift
+//  Resolved
+//
+//  Visual grid component showing progress toward a resolution target.
+//  Each block represents one completion, with tooltips showing the date.
+//
+
 import SwiftUI
 
+/// A 10-column grid visualization of progress toward a target
 struct ProgressGrid: View {
     @Environment(\.colorScheme) private var colorScheme
     let totalBlocks: Int

@@ -1,6 +1,22 @@
+//
+//  Resolution.swift
+//  Resolved
+//
+//  SwiftData model representing a user's resolution or goal to track.
+//  Resolutions have a target count and can be associated with log entries
+//  and rewards that unlock at various milestones.
+//
+
 import Foundation
 import SwiftData
 
+/// A resolution or goal that the user wants to track progress toward.
+///
+/// Resolutions are the core entity in the app. Each resolution has:
+/// - A name and optional description
+/// - A target count (e.g., "100 gym visits")
+/// - Associated log entries tracking each completion
+/// - Optional rewards that unlock at milestones
 @Model
 final class Resolution {
     // CloudKit requires default values for all stored properties
@@ -17,11 +33,13 @@ final class Resolution {
     @Relationship(deleteRule: .cascade, inverse: \Reward.resolution)
     var rewards: [Reward]? = []
     
+    /// Progress as a percentage (0-100)
     var progressPercentage: Double {
         guard targetCount > 0 else { return 0 }
         return min(Double((logEntries ?? []).count) / Double(targetCount) * 100, 100)
     }
     
+    /// Progress as a fraction string (e.g., "25/100")
     var progressFraction: String {
         "\((logEntries ?? []).count)/\(targetCount)"
     }
@@ -41,13 +59,31 @@ final class Resolution {
         (rewards ?? []).filter { $0.isUnlocked }
     }
     
-    /// Returns rewards that are still pending
+    /// Returns rewards that are still pending (not yet unlocked)
     var pendingRewards: [Reward] {
         (rewards ?? []).filter { !$0.isUnlocked }
     }
     
-    /// Check and unlock rewards when progress changes
-    /// Returns array of newly unlocked rewards
+    /// Total number of times rewards have been unlocked.
+    /// Counts segment rewards multiple times (e.g., "every 10" counts each milestone).
+    /// Uses the expected count based on actual progress to ensure accuracy even if
+    /// entries were added without going through normal reward tracking.
+    var totalUnlockCount: Int {
+        let currentCount = (logEntries ?? []).count
+        return (rewards ?? []).reduce(0) { total, reward in
+            if reward.triggerType == "segment" {
+                // Use the expected count based on actual progress
+                return total + reward.expectedUnlockCount(currentCount: currentCount)
+            } else {
+                return total + reward.unlockCount
+            }
+        }
+    }
+    
+    /// Checks all rewards and unlocks any that should trigger based on the progress change.
+    /// Also syncs segment reward unlock counts to match actual progress.
+    /// - Parameter previousCount: The log entry count before the latest entry was added
+    /// - Returns: Array of newly unlocked rewards (segment rewards may appear multiple times)
     @discardableResult
     func checkAndUnlockRewards(previousCount: Int) -> [Reward] {
         let currentCount = (logEntries ?? []).count
@@ -55,21 +91,44 @@ final class Resolution {
         
         for reward in (rewards ?? []) {
             if reward.shouldTrigger(at: currentCount, previousCount: previousCount, targetCount: targetCount) {
-                reward.unlock()
-                newlyUnlocked.append(reward)
+                let newUnlocks = reward.newUnlockCount(at: currentCount, previousCount: previousCount)
+                reward.unlock(incrementBy: newUnlocks)
+                // Add to array once per new unlock (for animation purposes)
+                for _ in 0..<newUnlocks {
+                    newlyUnlocked.append(reward)
+                }
+            }
+            
+            // Sync segment reward unlock counts to match actual progress
+            // This fixes cases where entries were added without proper reward tracking
+            if reward.triggerType == "segment" && reward.isUnlocked {
+                let expectedCount = reward.expectedUnlockCount(currentCount: currentCount)
+                if reward.unlockCount < expectedCount {
+                    reward.unlockCount = expectedCount
+                }
             }
         }
         
         return newlyUnlocked
     }
     
-    /// Find the next upcoming reward based on current progress
+    /// Finds the next reward that will unlock based on current progress.
+    /// For segment rewards, this returns the next segment milestone.
     var nextUpcomingReward: Reward? {
         let currentCount = (logEntries ?? []).count
         
-        return pendingRewards
+        // Include segment rewards (they repeat) and pending one-time rewards
+        let eligibleRewards = (rewards ?? []).filter { reward in
+            reward.triggerType == "segment" || !reward.isUnlocked
+        }
+        
+        return eligibleRewards
             .compactMap { reward -> (Reward, Int)? in
                 guard let target = reward.targetNumber(currentCount: currentCount, targetCount: targetCount) else {
+                    return nil
+                }
+                // For segment rewards, only show if next target is within overall target
+                if reward.triggerType == "segment" && target > targetCount {
                     return nil
                 }
                 return (reward, target)
@@ -79,7 +138,8 @@ final class Resolution {
             .first?.0
     }
     
-    /// Add a reward to this resolution
+    /// Adds a reward to this resolution
+    /// - Parameter reward: The reward to add
     func addReward(_ reward: Reward) {
         reward.resolution = self
         if rewards == nil {
@@ -98,7 +158,8 @@ final class Resolution {
         return (logEntries ?? []).filter { $0.date >= weekStart }.count
     }
     
-    /// Current streak - consecutive days with at least one log entry
+    /// Current streak - consecutive days with at least one log entry.
+    /// Counts backwards from today (or yesterday if no log today).
     var currentStreak: Int {
         let entries = logEntries ?? []
         guard !entries.isEmpty else { return 0 }
@@ -135,7 +196,7 @@ final class Resolution {
         return streak
     }
     
-    /// Number of logs needed until next reward (nil if no pending rewards)
+    /// Number of logs needed until next reward (nil if no upcoming rewards)
     var logsUntilNextReward: Int? {
         let currentCount = (logEntries ?? []).count
         guard let next = nextUpcomingReward,

@@ -1,6 +1,15 @@
+//
+//  EditResolutionSheet.swift
+//  Resolved
+//
+//  Sheet for editing an existing resolution's details and managing its rewards.
+//  Includes ability to update name, description, target count, and delete the resolution.
+//
+
 import SwiftUI
 import SwiftData
 
+/// Sheet view for editing an existing resolution
 struct EditResolutionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -10,6 +19,7 @@ struct EditResolutionSheet: View {
     
     @State private var selectedTab = 0
     @State private var showingAddReward = false
+    @State private var showingDeleteConfirmation = false
     
     @FocusState private var focusedField: Field?
     
@@ -59,6 +69,14 @@ struct EditResolutionSheet: View {
             .scrollDismissesKeyboard(.interactively)
             .sheet(isPresented: $showingAddReward) {
                 AddRewardToResolutionSheet(resolution: resolution)
+            }
+            .alert("Delete Resolution?", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    deleteResolution()
+                }
+            } message: {
+                Text("This will permanently delete \"\(resolution.name)\" and all its progress. This cannot be undone.")
             }
         }
     }
@@ -160,6 +178,26 @@ struct EditResolutionSheet: View {
                         .cornerRadius(12)
                     }
                     
+                    // Delete resolution button
+                    Button(action: { showingDeleteConfirmation = true }) {
+                        HStack {
+                            Image(systemName: "trash.fill")
+                            Text("Delete Resolution")
+                        }
+                        .font(.custom("Avenir Next", size: 16))
+                        .fontWeight(.medium)
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        )
+                    }
+                    .padding(.top, 24)
+                    
                     // Extra padding for keyboard
                     Spacer()
                         .frame(height: 200)
@@ -239,14 +277,14 @@ struct EditResolutionSheet: View {
                     }
                     .font(.custom("Avenir Next", size: 16))
                     .fontWeight(.medium)
-                    .foregroundColor(AppColors.success)
+                    .foregroundColor(AppColors.success(colorScheme))
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(AppColors.inputBackground(colorScheme))
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(AppColors.success.opacity(0.5), lineWidth: 1)
+                            .stroke(AppColors.success(colorScheme).opacity(AppColors.borderOpacity(colorScheme)), lineWidth: 1)
                     )
                 }
             }
@@ -259,6 +297,20 @@ struct EditResolutionSheet: View {
     private func deleteReward(_ reward: Reward) {
         resolution.rewards?.removeAll { $0.id == reward.id }
         modelContext.delete(reward)
+    }
+    
+    private func deleteResolution() {
+        // Delete all associated log entries
+        for entry in resolution.logEntries ?? [] {
+            modelContext.delete(entry)
+        }
+        // Delete all associated rewards
+        for reward in resolution.rewards ?? [] {
+            modelContext.delete(reward)
+        }
+        // Delete the resolution
+        modelContext.delete(resolution)
+        dismiss()
     }
 }
 
@@ -274,12 +326,12 @@ struct EditableRewardRow: View {
             // Status indicator
             ZStack {
                 Circle()
-                    .fill(reward.isUnlocked ? AppColors.gold.opacity(0.2) : AppColors.inputBackground(colorScheme))
+                    .fill(reward.isUnlocked ? AppColors.gold(colorScheme).opacity(AppColors.subtleBackgroundOpacity(colorScheme, base: 0.2)) : AppColors.inputBackground(colorScheme))
                     .frame(width: 40, height: 40)
                 
                 Image(systemName: reward.isUnlocked ? "checkmark.circle.fill" : reward.triggerIcon)
                     .font(.system(size: 18))
-                    .foregroundColor(reward.isUnlocked ? AppColors.gold : AppColors.secondaryText(colorScheme))
+                    .foregroundColor(reward.isUnlocked ? AppColors.gold(colorScheme) : AppColors.secondaryText(colorScheme))
             }
             
             VStack(alignment: .leading, spacing: 4) {
@@ -296,7 +348,7 @@ struct EditableRewardRow: View {
                     if reward.isUnlocked {
                         Text("• Unlocked")
                             .font(.custom("Avenir Next", size: 12))
-                            .foregroundColor(AppColors.success)
+                            .foregroundColor(AppColors.success(colorScheme))
                     }
                 }
             }
@@ -317,7 +369,7 @@ struct EditableRewardRow: View {
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(reward.isUnlocked ? AppColors.gold.opacity(0.3) : Color.clear, lineWidth: 1)
+                .stroke(reward.isUnlocked ? AppColors.gold(colorScheme).opacity(AppColors.borderOpacity(colorScheme, base: 0.3)) : Color.clear, lineWidth: 1)
         )
     }
 }
@@ -419,7 +471,7 @@ struct AddRewardToResolutionSheet: View {
                                     Text("#\(milestoneValue)")
                                         .font(.custom("Avenir Next", size: 18))
                                         .fontWeight(.bold)
-                                        .foregroundColor(AppColors.gold)
+                                        .foregroundColor(AppColors.gold(colorScheme))
                                         .frame(width: 60)
                                 }
                                 .padding()
@@ -429,7 +481,7 @@ struct AddRewardToResolutionSheet: View {
                         } else {
                             HStack {
                                 Image(systemName: "trophy.fill")
-                                    .foregroundColor(AppColors.gold)
+                                    .foregroundColor(AppColors.gold(colorScheme))
                                 Text("Unlocks when all \(resolution.targetCount) are completed!")
                                     .font(.custom("Avenir Next", size: 14))
                                     .foregroundColor(AppColors.secondaryText(colorScheme))
